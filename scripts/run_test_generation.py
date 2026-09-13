@@ -39,8 +39,9 @@ SAMPLE_RESEARCH = [
 
 
 def load_agent_prompt(filename: str) -> str:
-    """共通ポリシー(00_shared_policies.md)を先頭に結合し、各エージェント固有の指示を続ける。"""
-    shared = (REPO_ROOT / "agents" / "00_shared_policies.md").read_text(encoding="utf-8")
+    """共通ポリシー(_shared_policies.md。エージェントではなく全エージェント共通の前提)を
+    先頭に結合し、各エージェント固有の指示を続ける。"""
+    shared = (REPO_ROOT / "agents" / "_shared_policies.md").read_text(encoding="utf-8")
     specific = (REPO_ROOT / "agents" / filename).read_text(encoding="utf-8")
     return shared + "\n\n---\n\n" + specific
 
