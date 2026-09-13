@@ -1,0 +1,17 @@
+# secrets
+.env
+*.env.local
+service-account*.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# logs (usage_log.json is intentionally tracked for cross-run persistence,
+# but ad-hoc debug logs are not)
+*.log

@@ -1,0 +1,48 @@
+name: weekly-pipeline
+
+# フェーズ2時点では手動実行のみ。定時実行(cron)はフェーズ4で有効化する。
+# 例(フェーズ4で追加予定): schedule: - cron: '0 21 * * 0'  # 毎週日曜 06:00 JST
+on:
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: "true にすると実際にAnthropic APIを呼び出します(少額課金が発生します)。falseならdry-runのみ。"
+        type: boolean
+        default: false
+
+jobs:
+  test-and-generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests (no API calls, no cost)
+        run: python -m unittest discover tests -v
+
+      - name: Dry-run generation check (no API calls, no cost)
+        if: ${{ inputs.run_live != true }}
+        run: python scripts/run_test_generation.py --dry-run
+
+      - name: Live generation (calls Anthropic API, incurs cost)
+        if: ${{ inputs.run_live == true }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MONTHLY_BUDGET_JPY: ${{ vars.MONTHLY_BUDGET_JPY }}
+          USD_JPY_RATE: ${{ vars.USD_JPY_RATE }}
+        run: python scripts/run_test_generation.py
+
+      - name: Commit updated usage log
+        if: ${{ inputs.run_live == true }}
+        run: |
+          git config user.name "recruiting-media-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add cost_log/usage_log.json
+          git diff --cached --quiet || git commit -m "chore: update API usage log"
+          git push
