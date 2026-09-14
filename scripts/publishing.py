@@ -52,27 +52,43 @@ def _chunk_script(text: str, chars_per_chunk: int = 25, chars_per_sec: float = 6
     return chunks or [{"text": text[:chars_per_chunk], "duration_sec": 3}]
 
 
+def _graph_call(method: str, url: str, **kwargs):
+    """Graph APIを呼び出し、失敗時はMetaが返す詳細なエラーメッセージ(error.message等)を
+    例外メッセージに含める。requests.raise_for_status() だけだと 'Bad Request' としか
+    分からず、エラーログを見ても原因が特定できないため。"""
+    resp = requests.request(method, url, timeout=60, **kwargs)
+    if not resp.ok:
+        try:
+            detail = resp.json().get("error", {})
+            message = detail.get("error_user_msg") or detail.get("message") or resp.text
+        except ValueError:
+            message = resp.text
+        raise RuntimeError(f"Instagram Graph APIエラー({resp.status_code}) {url}: {message}")
+    return resp.json()
+
+
 def _post_instagram_carousel(image_urls: list[str], caption: str) -> str:
     token = config.IG_ACCESS_TOKEN
     ig_user_id = config.IG_BUSINESS_ACCOUNT_ID
 
     if len(image_urls) == 1:
-        resp = requests.post(
+        result = _graph_call(
+            "post",
             f"{GRAPH_API_BASE}/{ig_user_id}/media",
             data={"image_url": image_urls[0], "caption": caption, "access_token": token},
         )
-        resp.raise_for_status()
-        creation_id = resp.json()["id"]
+        creation_id = result["id"]
     else:
         child_ids = []
         for url in image_urls:
-            resp = requests.post(
+            result = _graph_call(
+                "post",
                 f"{GRAPH_API_BASE}/{ig_user_id}/media",
                 data={"image_url": url, "is_carousel_item": "true", "access_token": token},
             )
-            resp.raise_for_status()
-            child_ids.append(resp.json()["id"])
-        resp = requests.post(
+            child_ids.append(result["id"])
+        result = _graph_call(
+            "post",
             f"{GRAPH_API_BASE}/{ig_user_id}/media",
             data={
                 "media_type": "CAROUSEL",
@@ -81,21 +97,19 @@ def _post_instagram_carousel(image_urls: list[str], caption: str) -> str:
                 "access_token": token,
             },
         )
-        resp.raise_for_status()
-        creation_id = resp.json()["id"]
+        creation_id = result["id"]
 
-    resp = requests.post(
+    result = _graph_call(
+        "post",
         f"{GRAPH_API_BASE}/{ig_user_id}/media_publish",
         data={"creation_id": creation_id, "access_token": token},
     )
-    resp.raise_for_status()
-    media_id = resp.json()["id"]
+    media_id = result["id"]
 
-    resp = requests.get(
-        f"{GRAPH_API_BASE}/{media_id}", params={"fields": "permalink", "access_token": token}
+    result = _graph_call(
+        "get", f"{GRAPH_API_BASE}/{media_id}", params={"fields": "permalink", "access_token": token}
     )
-    resp.raise_for_status()
-    return resp.json().get("permalink", f"https://www.instagram.com/p/{media_id}/")
+    return result.get("permalink", f"https://www.instagram.com/p/{media_id}/")
 
 
 def _post_youtube_short(video_path: Path, title: str, description: str) -> str:
