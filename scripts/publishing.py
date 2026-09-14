@@ -169,14 +169,29 @@ def _record_error(calendar_id: str, message: str, retried: int = 0) -> None:
 
 
 def _log_token_shape(name: str, value: str) -> None:
-    """トークンの中身は一切出力せず、長さと空白混入の有無だけをログに出す。
-    「Cannot parse access token」がコピー時の空白混入によるものかを、
+    """トークンの中身は一切出力せず、形がおかしくないかだけをログに出す。
+    「Cannot parse access token」が空白混入以外の原因(JSON丸ごとや
+    引用符の混入、トークン形式そのものの誤りなど)によるものかを、
     値そのものを見せずに切り分けるための診断ログ。"""
     if not value:
         print(f"[診断] {name}: 未設定(空文字列)")
         return
     has_whitespace = value != value.strip() or any(c.isspace() for c in value)
-    print(f"[診断] {name}: 文字数={len(value)} 空白混入={has_whitespace}")
+    suspicious_chars = {
+        "引用符(\"や')": any(c in value for c in "\"'"),
+        "波括弧({や})": any(c in value for c in "{}"),
+        "コロン(:)": ":" in value,
+        "カンマ(,)": "," in value,
+        "スラッシュ(/)": "/" in value,
+    }
+    found_suspicious = [label for label, present in suspicious_chars.items() if present]
+    allowed_charset_only = bool(re.fullmatch(r"[A-Za-z0-9_\-.]+", value))
+    print(
+        f"[診断] {name}: 文字数={len(value)} 空白混入={has_whitespace} "
+        f"英数字と_-.のみで構成={allowed_charset_only} "
+        f"不審な文字={found_suspicious or 'なし'} "
+        f"先頭2文字={value[:2]!r} 末尾2文字={value[-2:]!r}"
+    )
 
 
 def run() -> None:
