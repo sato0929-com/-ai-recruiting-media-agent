@@ -21,10 +21,11 @@ CAROUSEL_SIZE = (1080, 1350)
 SHORTS_SIZE = (1080, 1920)
 
 # 共通テンプレート(3種類まで運用する想定。agents/05_creative.md 参照)
+# 配色は青・シルバー・白を基調とする(2026-09-14変更)。
 TEMPLATES = {
-    "template_a": {"bg": "#f5f6f2", "ink": "#16211c", "accent": "#1f6f5c", "accent_soft": "#e1efe9"},
-    "template_b": {"bg": "#16211c", "ink": "#f5f6f2", "accent": "#57bd9e", "accent_soft": "#22332b"},
-    "template_c": {"bg": "#f6efe4", "ink": "#2b2118", "accent": "#a15a1a", "accent_soft": "#f0e0c8"},
+    "template_a": {"bg": "#ffffff", "ink": "#0b1f3a", "accent": "#1d4ed8", "accent_soft": "#e8edf7"},
+    "template_b": {"bg": "#0b1f3a", "ink": "#f5f7fa", "accent": "#8fb2e8", "accent_soft": "#16305a"},
+    "template_c": {"bg": "#eef0f3", "ink": "#0b1f3a", "accent": "#1d4ed8", "accent_soft": "#ffffff"},
 }
 
 _FONT_LINK = (
@@ -41,17 +42,20 @@ _CAROUSEL_HTML = """<!doctype html>
     width:{w}px;height:{h}px;background:{bg};color:{ink};
     font-family:"Noto Sans JP",sans-serif;
     display:flex;flex-direction:column;justify-content:space-between;
-    box-sizing:border-box;padding:88px 84px;
+    box-sizing:border-box;padding:140px 110px;
   }}
-  .eyebrow{{font-size:28px;color:{accent};font-weight:700;letter-spacing:.08em;}}
+  .eyebrow{{font-size:26px;color:{accent};font-weight:700;letter-spacing:.14em;}}
   h1{{
-    font-family:"Shippori Mincho",serif;font-size:64px;line-height:1.35;
-    margin:24px 0 0;color:{ink};
+    font-family:"Shippori Mincho",serif;font-size:62px;line-height:1.5;
+    margin:44px 0 0;color:{ink};
   }}
-  p{{font-size:34px;line-height:1.7;margin:36px 0 0;color:{ink};}}
-  .footer{{display:flex;justify-content:space-between;align-items:center;font-size:24px;color:{accent};}}
+  p{{font-size:32px;line-height:1.9;margin:56px 0 0;color:{ink};}}
+  .footer{{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:22px;color:{accent};padding-top:32px;border-top:1px solid {accent_soft};
+  }}
   .pagebox{{
-    background:{accent};color:{bg};border-radius:999px;padding:10px 26px;font-weight:700;
+    border:1px solid {accent};color:{accent};border-radius:999px;padding:8px 24px;font-weight:700;
   }}
 </style></head>
 <body>
@@ -75,14 +79,14 @@ _SHORTS_FRAME_HTML = """<!doctype html>
     width:{w}px;height:{h}px;background:{bg};color:{ink};
     font-family:"Noto Sans JP",sans-serif;
     display:flex;align-items:center;justify-content:center;
-    box-sizing:border-box;padding:100px;
+    box-sizing:border-box;padding:160px 130px;
   }}
   p{{
-    font-family:"Shippori Mincho",serif;font-size:72px;line-height:1.5;
+    font-family:"Shippori Mincho",serif;font-size:68px;line-height:1.7;
     text-align:center;color:{ink};
   }}
   .accent-bar{{
-    position:absolute;top:0;left:0;right:0;height:14px;background:{accent};
+    position:absolute;top:0;left:0;right:0;height:6px;background:{accent};
   }}
 </style></head>
 <body>
@@ -165,6 +169,7 @@ def render_carousel(slides: list[dict], output_dir: Path, template: str = "templ
             bg=colors["bg"],
             ink=colors["ink"],
             accent=colors["accent"],
+            accent_soft=colors["accent_soft"],
             heading=html.escape(slide["heading"]),
             body=html.escape(slide["body"]),
             slide_no=i,
