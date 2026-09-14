@@ -11,7 +11,14 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
-from config import COST_LOG_PATH, MONTHLY_BUDGET_JPY, PRICING_USD_PER_MTOK, SOFT_LIMIT_RATIO, USD_JPY_RATE
+from config import (
+    COST_LOG_PATH,
+    MONTHLY_BUDGET_JPY,
+    PRICING_USD_PER_MTOK,
+    SOFT_LIMIT_RATIO,
+    USD_JPY_RATE,
+    WEB_SEARCH_COST_USD_PER_SEARCH,
+)
 
 CallKind = Literal["generation", "utility"]
 
@@ -31,13 +38,18 @@ class UsageEntry:
     model: str
     input_tokens: int
     output_tokens: int
-    cost_usd: float
+    web_search_count: int
+    cost_usd: float  # トークン課金+Web検索課金の合計
     cost_jpy: float
 
 
 def calc_cost_usd(model: str, input_tokens: int, output_tokens: int) -> float:
     price = PRICING_USD_PER_MTOK[model]
     return (input_tokens / 1_000_000) * price["input"] + (output_tokens / 1_000_000) * price["output"]
+
+
+def calc_web_search_cost_usd(web_search_count: int) -> float:
+    return web_search_count * WEB_SEARCH_COST_USD_PER_SEARCH
 
 
 def _load_entries(log_path: Path = COST_LOG_PATH) -> list[dict]:
@@ -54,15 +66,21 @@ def _save_entries(entries: list[dict], log_path: Path = COST_LOG_PATH) -> None:
 
 
 def record_usage(
-    agent: str, model: str, input_tokens: int, output_tokens: int, log_path: Path = COST_LOG_PATH
+    agent: str,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    web_search_count: int = 0,
+    log_path: Path = COST_LOG_PATH,
 ) -> UsageEntry:
-    cost_usd = calc_cost_usd(model, input_tokens, output_tokens)
+    cost_usd = calc_cost_usd(model, input_tokens, output_tokens) + calc_web_search_cost_usd(web_search_count)
     entry = UsageEntry(
         timestamp=datetime.now(timezone.utc).isoformat(),
         agent=agent,
         model=model,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        web_search_count=web_search_count,
         cost_usd=round(cost_usd, 6),
         cost_jpy=round(cost_usd * USD_JPY_RATE, 2),
     )

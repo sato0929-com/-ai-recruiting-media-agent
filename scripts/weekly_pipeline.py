@@ -1,12 +1,13 @@
 """週次自動パイプライン本体(GitHub Actionsから自動実行される想定)。
 
-企画→原稿までを自動生成し、Googleスプレッドシートに書き込む。
+リサーチ→企画→原稿までを自動生成し、Googleスプレッドシートに書き込む。
 投稿の自動化はまだ行わない(Instagram/YouTubeのアカウント・API連携が未整備のため)。
 書き込まれる「投稿カレンダー」のステータスは必ず「下書き」で、人間が確認して
 「承認」に変更するまで一切公開されない。
 
-リサーチ結果は今のところ scripts/run_test_generation.py のサンプルデータを使う
-(実際のWeb検索連携は今後のフェーズで追加予定)。
+リサーチはClaudeのサーバーサイドWeb検索ツールを使う(2026-09-14〜)。
+検索が失敗した場合のみ、scripts/run_test_generation.py の固定サンプルデータに
+フォールバックする(処理を止めないため。ログに警告を出す)。
 """
 from __future__ import annotations
 
@@ -26,6 +27,45 @@ from run_test_generation import SAMPLE_RESEARCH, load_agent_prompt  # noqa: E402
 
 # 週次パイプライン1回の実行で作成する投稿本数(週4本体制。2026-09-14変更)。
 POSTS_PER_RUN = 4
+
+# リサーチのテーマキーワード候補。毎週ローテーションして偏りを避ける。
+RESEARCH_KEYWORD_SETS = [
+    ["中小企業 採用 求人媒体 費用", "求人票 書き方 応募が集まる"],
+    ["人事 採用業務 AIツール 活用事例", "採用担当者 業務効率化"],
+    ["転職 求人 応募が増えない 原因", "採用ミスマッチ 対策"],
+    ["中途採用 面接 選考プロセス 改善", "内定辞退 防止"],
+]
+
+
+def _research_keywords_for_this_week() -> list[str]:
+    week_number = datetime.now(timezone.utc).isocalendar().week
+    return RESEARCH_KEYWORD_SETS[week_number % len(RESEARCH_KEYWORD_SETS)]
+
+
+def _run_research() -> list[dict]:
+    research_system = load_agent_prompt("02_research.md")
+    keywords = _research_keywords_for_this_week()
+    try:
+        research_text = claude_client.call_haiku(
+            system=research_system,
+            user_prompt="以下のテーマキーワードについて、Web検索を使って公開情報を調べ、"
+            "指定のJSON形式で整理してください。\n\nテーマキーワード:\n"
+            + "\n".join(f"- {k}" for k in keywords),
+            agent="research",
+            kind="generation",
+            max_tokens=3000,
+            enable_web_search=True,
+            max_searches=6,
+        )
+        research = claude_client.parse_json_response(research_text)
+        if research:
+            return research
+        print("リサーチ結果が0件でした。サンプルデータにフォールバックします。")
+    except (budget_guard.SoftBudgetExceeded, budget_guard.HardBudgetExceeded):
+        raise
+    except Exception as e:  # noqa: BLE001
+        print(f"リサーチ中にエラーが発生したため、サンプルデータにフォールバックします: {e}")
+    return SAMPLE_RESEARCH
 
 
 def _platform_for(format_label: str) -> str:
@@ -92,11 +132,13 @@ def run() -> None:
     planning_system = load_agent_prompt("03_planning.md")
     writing_system = load_agent_prompt("04_writing.md")
 
+    research = _run_research()
+
     plan_text = claude_client.call_sonnet(
         system=planning_system,
         user_prompt=f"以下のリサーチ結果から、投稿企画案を{POSTS_PER_RUN + 2}件作成してください。"
         "同じリサーチ結果からでも、切り口(angle)が重複しないようにしてください。\n\n"
-        + json.dumps(SAMPLE_RESEARCH, ensure_ascii=False, indent=2),
+        + json.dumps(research, ensure_ascii=False, indent=2),
         agent="planning",
         kind="generation",
         max_tokens=3000,

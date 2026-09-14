@@ -30,6 +30,10 @@ PRICING_USD_PER_MTOK = {
     MODEL_SONNET: {"input": 2.00, "output": 10.00},
 }
 
+# Web検索(サーバーサイドツール)は1検索ごとに定額課金される(トークン課金とは別)。
+# 参照: Anthropic公式料金表($10 / 1,000検索)。
+WEB_SEARCH_COST_USD_PER_SEARCH = 0.01
+
 # --- コスト管理 ---
 # `os.environ.get(key, default)` だと、GitHub Actionsの未設定vars(空文字列 "")が
 # 渡された場合にdefaultへ落ちずエラーになるため、空文字列も「未設定」として扱う。

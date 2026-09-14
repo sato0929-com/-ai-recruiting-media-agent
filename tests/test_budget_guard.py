@@ -20,6 +20,10 @@ class TestCostCalculation(unittest.TestCase):
         cost = budget_guard.calc_cost_usd(config.MODEL_SONNET, input_tokens=1_000_000, output_tokens=1_000_000)
         self.assertAlmostEqual(cost, 2.00 + 10.00)
 
+    def test_web_search_cost_matches_pricing_table(self):
+        cost = budget_guard.calc_web_search_cost_usd(web_search_count=1000)
+        self.assertAlmostEqual(cost, 10.00)
+
 
 class TestUsageLedger(unittest.TestCase):
     def setUp(self):
@@ -33,6 +37,14 @@ class TestUsageLedger(unittest.TestCase):
         budget_guard.record_usage("test_agent", config.MODEL_HAIKU, 100_000, 50_000, log_path=self.log_path)
         total = budget_guard.total_cost_jpy("month", log_path=self.log_path)
         self.assertGreater(total, 0)
+
+    def test_record_usage_includes_web_search_cost(self):
+        entry = budget_guard.record_usage(
+            "test_agent", config.MODEL_HAIKU, 0, 0, web_search_count=10, log_path=self.log_path
+        )
+        expected_usd = budget_guard.calc_web_search_cost_usd(10)
+        self.assertAlmostEqual(entry.cost_usd, expected_usd)
+        self.assertEqual(entry.web_search_count, 10)
 
     def test_total_excludes_previous_month(self):
         old_entry = {
