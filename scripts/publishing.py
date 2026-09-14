@@ -168,7 +168,21 @@ def _record_error(calendar_id: str, message: str, retried: int = 0) -> None:
     )
 
 
+def _log_token_shape(name: str, value: str) -> None:
+    """トークンの中身は一切出力せず、長さと空白混入の有無だけをログに出す。
+    「Cannot parse access token」がコピー時の空白混入によるものかを、
+    値そのものを見せずに切り分けるための診断ログ。"""
+    if not value:
+        print(f"[診断] {name}: 未設定(空文字列)")
+        return
+    has_whitespace = value != value.strip() or any(c.isspace() for c in value)
+    print(f"[診断] {name}: 文字数={len(value)} 空白混入={has_whitespace}")
+
+
 def run() -> None:
+    _log_token_shape("IG_ACCESS_TOKEN", config.IG_ACCESS_TOKEN)
+    _log_token_shape("IG_BUSINESS_ACCOUNT_ID", config.IG_BUSINESS_ACCOUNT_ID)
+
     calendar_rows = sheets_client.read_rows("投稿カレンダー")
     draft_rows = sheets_client.read_rows("投稿原稿")
     drafts_by_calendar_id = {r[1]: r for r in draft_rows if len(r) > 1}
