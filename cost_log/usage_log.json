@@ -7,5 +7,23 @@
     "output_tokens": 600,
     "cost_usd": 0.010868,
     "cost_jpy": 1.74
+  },
+  {
+    "timestamp": "2026-09-14T03:47:45.947557+00:00",
+    "agent": "planning",
+    "model": "claude-sonnet-5",
+    "input_tokens": 2507,
+    "output_tokens": 587,
+    "cost_usd": 0.010884,
+    "cost_jpy": 1.74
+  },
+  {
+    "timestamp": "2026-09-14T03:48:13.099949+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 2455,
+    "output_tokens": 2144,
+    "cost_usd": 0.02635,
+    "cost_jpy": 4.22
   }
 ]
