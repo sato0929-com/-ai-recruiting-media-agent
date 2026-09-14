@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "timestamp": "2026-09-14T03:45:16.650438+00:00",
+    "agent": "planning",
+    "model": "claude-sonnet-5",
+    "input_tokens": 2434,
+    "output_tokens": 600,
+    "cost_usd": 0.010868,
+    "cost_jpy": 1.74
+  }
+]
