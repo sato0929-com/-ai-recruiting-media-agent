@@ -6,6 +6,9 @@
 """
 from __future__ import annotations
 
+import json
+import re
+
 import anthropic
 
 import budget_guard
@@ -23,6 +26,16 @@ def _get_client() -> anthropic.Anthropic:
 
 def _extract_text(response: anthropic.types.Message) -> str:
     return "".join(block.text for block in response.content if block.type == "text")
+
+
+def parse_json_response(text: str):
+    """モデルの出力からJSONを取り出す。```json ... ``` のようなMarkdownの
+    コードフェンスで囲まれていても、素のJSONだけを渡しても解析できる。"""
+    stripped = text.strip()
+    match = re.search(r"```(?:json)?\s*(.*?)```", stripped, re.DOTALL)
+    if match:
+        stripped = match.group(1).strip()
+    return json.loads(stripped)
 
 
 def call_haiku(

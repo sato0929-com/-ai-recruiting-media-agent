@@ -44,7 +44,7 @@ def run() -> None:
         max_tokens=2000,
     )
     try:
-        plans = json.loads(plan_text)
+        plans = claude_client.parse_json_response(plan_text)
     except json.JSONDecodeError:
         print("企画エージェントの出力がJSONとして解析できませんでした。処理を中断します。")
         print(plan_text)
@@ -64,7 +64,7 @@ def run() -> None:
         max_tokens=3000,
     )
     try:
-        draft = json.loads(draft_text)
+        draft = claude_client.parse_json_response(draft_text)
     except json.JSONDecodeError:
         print("原稿エージェントの出力がJSONとして解析できませんでした。処理を中断します。")
         print(draft_text)
