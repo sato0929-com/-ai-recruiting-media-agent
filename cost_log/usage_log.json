@@ -195,5 +195,115 @@
     "web_search_count": 0,
     "cost_usd": 0.032976,
     "cost_jpy": 5.28
+  },
+  {
+    "timestamp": "2026-09-14T09:25:24.338135+00:00",
+    "agent": "research",
+    "model": "claude-haiku-4-5",
+    "input_tokens": 18600,
+    "output_tokens": 3415,
+    "web_search_count": 2,
+    "cost_usd": 0.055675,
+    "cost_jpy": 8.91
+  },
+  {
+    "timestamp": "2026-09-14T09:25:49.164346+00:00",
+    "agent": "planning",
+    "model": "claude-sonnet-5",
+    "input_tokens": 5303,
+    "output_tokens": 2226,
+    "web_search_count": 0,
+    "cost_usd": 0.032866,
+    "cost_jpy": 5.26
+  },
+  {
+    "timestamp": "2026-09-14T09:26:11.366575+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3161,
+    "output_tokens": 1923,
+    "web_search_count": 0,
+    "cost_usd": 0.025552,
+    "cost_jpy": 4.09
+  },
+  {
+    "timestamp": "2026-09-14T09:26:48.234084+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3157,
+    "output_tokens": 2738,
+    "web_search_count": 0,
+    "cost_usd": 0.033694,
+    "cost_jpy": 5.39
+  },
+  {
+    "timestamp": "2026-09-14T09:27:22.102525+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3184,
+    "output_tokens": 2633,
+    "web_search_count": 0,
+    "cost_usd": 0.032698,
+    "cost_jpy": 5.23
+  },
+  {
+    "timestamp": "2026-09-14T09:27:50.302301+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3182,
+    "output_tokens": 2022,
+    "web_search_count": 0,
+    "cost_usd": 0.026584,
+    "cost_jpy": 4.25
+  },
+  {
+    "timestamp": "2026-09-14T09:28:16.900265+00:00",
+    "agent": "planning",
+    "model": "claude-sonnet-5",
+    "input_tokens": 5301,
+    "output_tokens": 2154,
+    "web_search_count": 0,
+    "cost_usd": 0.032142,
+    "cost_jpy": 5.14
+  },
+  {
+    "timestamp": "2026-09-14T09:28:46.257550+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3159,
+    "output_tokens": 2293,
+    "web_search_count": 0,
+    "cost_usd": 0.029248,
+    "cost_jpy": 4.68
+  },
+  {
+    "timestamp": "2026-09-14T09:29:10.120597+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3170,
+    "output_tokens": 1836,
+    "web_search_count": 0,
+    "cost_usd": 0.0247,
+    "cost_jpy": 3.95
+  },
+  {
+    "timestamp": "2026-09-14T09:29:30.397639+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3174,
+    "output_tokens": 1713,
+    "web_search_count": 0,
+    "cost_usd": 0.023478,
+    "cost_jpy": 3.76
+  },
+  {
+    "timestamp": "2026-09-14T09:29:53.973299+00:00",
+    "agent": "writing",
+    "model": "claude-sonnet-5",
+    "input_tokens": 3160,
+    "output_tokens": 1726,
+    "web_search_count": 0,
+    "cost_usd": 0.02358,
+    "cost_jpy": 3.77
   }
 ]
