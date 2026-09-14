@@ -3,3 +3,5 @@ python-dotenv>=1.0
 google-auth>=2.35
 google-api-python-client>=2.150
 playwright>=1.47
+google-cloud-storage>=2.18
+requests>=2.32

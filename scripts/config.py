@@ -38,3 +38,17 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 # `gcloud auth application-default login` を、GitHub Actions上では
 # google-github-actions/auth アクションを使う(docs/setup/05_workload_identity_federation.md 参照)。
 GOOGLE_SHEETS_SPREADSHEET_ID = os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", "")
+
+# --- Cloud Storage(生成した画像・動画をInstagram/YouTube APIから参照できる公開URLにする) ---
+GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME") or "recruiting-media-agent-assets"
+
+# --- Instagram Graph API ---
+IG_ACCESS_TOKEN = os.environ.get("IG_ACCESS_TOKEN", "")
+IG_BUSINESS_ACCOUNT_ID = os.environ.get("IG_BUSINESS_ACCOUNT_ID", "")
+
+# --- YouTube Data API ---
+# サービスアカウントではなく、チャンネル所有者のOAuthリフレッシュトークンを使う
+# (YouTubeへのアップロードはユーザー認可が必須で、サービスアカウントでは行えないため)。
+YOUTUBE_CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID", "")
+YOUTUBE_CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET", "")
+YOUTUBE_REFRESH_TOKEN = os.environ.get("YOUTUBE_REFRESH_TOKEN", "")

@@ -1,0 +1,50 @@
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: "true にすると、承認済みの投稿を実際にInstagram/YouTubeへ公開します。"
+        type: boolean
+        default: false
+  schedule:
+    # 毎日8:00 JST(=前日23:00 UTC)に、承認済みの投稿がないか確認して公開する。
+    - cron: "0 23 * * *"
+
+permissions:
+  id-token: write   # Google CloudへのWorkload Identity Federation認証に必要
+  contents: write    # cost_log等の将来的な更新に備えて付与(現状publishingは書き込まない)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' || inputs.run_live == true }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: playwright install --with-deps chromium
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/532132424145/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+          service_account: sheets-bot@recruiting-media-agent.iam.gserviceaccount.com
+
+      - name: Run publishing agent (posts to Instagram/YouTube, incurs no Anthropic API cost)
+        env:
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ vars.GOOGLE_SHEETS_SPREADSHEET_ID }}
+          GCS_BUCKET_NAME: recruiting-media-agent-assets
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: python scripts/publishing.py

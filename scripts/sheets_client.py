@@ -47,3 +47,14 @@ def read_rows(sheet_name: str, cell_range: str = "A2:Z1000") -> list[list]:
         .execute()
     )
     return result.get("values", [])
+
+
+def update_cell(sheet_name: str, row_number: int, column_letter: str, value) -> None:
+    """1つのセルを更新する(例: update_cell("投稿カレンダー", 2, "F", "投稿済み"))。"""
+    service = _get_service()
+    service.spreadsheets().values().update(
+        spreadsheetId=GOOGLE_SHEETS_SPREADSHEET_ID,
+        range=f"{sheet_name}!{column_letter}{row_number}",
+        valueInputOption="USER_ENTERED",
+        body={"values": [[value]]},
+    ).execute()
