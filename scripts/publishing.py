@@ -31,7 +31,11 @@ import storage_client  # noqa: E402
 
 MAX_RETRY = 3
 CONSECUTIVE_FAILURE_LIMIT = 3
-GRAPH_API_BASE = "https://graph.facebook.com/v21.0"
+# 「IG」で始まるトークン(Instagramへの直接ログインで発行される新方式)は
+# graph.facebook.comでは解析できず「Cannot parse access token」になる。
+# その場合はgraph.instagram.comを使う必要がある(診断ログで先頭2文字を確認した結果、
+# このプロジェクトのトークンはこちらの方式だと判明した)。
+GRAPH_API_BASE = "https://graph.instagram.com/v21.0"
 
 # 投稿カレンダーのステータス列(A列を1として6列目=F列)
 CALENDAR_STATUS_COLUMN = "F"
