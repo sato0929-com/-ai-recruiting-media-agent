@@ -24,6 +24,9 @@ import claude_client  # noqa: E402
 import sheets_client  # noqa: E402
 from run_test_generation import SAMPLE_RESEARCH, load_agent_prompt  # noqa: E402
 
+# 週次パイプライン1回の実行で作成する投稿本数(週4本体制。2026-09-14変更)。
+POSTS_PER_RUN = 4
+
 
 def _platform_for(format_label: str) -> str:
     if "YouTube" in format_label:
@@ -31,30 +34,7 @@ def _platform_for(format_label: str) -> str:
     return "Instagram"
 
 
-def run() -> None:
-    planning_system = load_agent_prompt("03_planning.md")
-    writing_system = load_agent_prompt("04_writing.md")
-
-    plan_text = claude_client.call_sonnet(
-        system=planning_system,
-        user_prompt="以下のリサーチ結果から、投稿企画案を2件作成してください。\n\n"
-        + json.dumps(SAMPLE_RESEARCH, ensure_ascii=False, indent=2),
-        agent="planning",
-        kind="generation",
-        max_tokens=2000,
-    )
-    try:
-        plans = claude_client.parse_json_response(plan_text)
-    except json.JSONDecodeError:
-        print("企画エージェントの出力がJSONとして解析できませんでした。処理を中断します。")
-        print(plan_text)
-        return
-    if not plans:
-        print("企画案が0件でした。処理を終了します。")
-        return
-
-    top_plan = max(plans, key=lambda p: p.get("scores", {}).get("合計", 0))
-
+def _write_one(planning_system: str, writing_system: str, top_plan: dict) -> None:
     draft_text = claude_client.call_sonnet(
         system=writing_system,
         user_prompt="以下の企画案から、Instagramカルーセル投稿の原稿一式を作成してください。\n\n"
@@ -66,7 +46,7 @@ def run() -> None:
     try:
         draft = claude_client.parse_json_response(draft_text)
     except json.JSONDecodeError:
-        print("原稿エージェントの出力がJSONとして解析できませんでした。処理を中断します。")
+        print(f"原稿エージェントの出力がJSONとして解析できませんでした(企画: {top_plan.get('title')})。この1件をスキップします。")
         print(draft_text)
         return
 
@@ -106,6 +86,41 @@ def run() -> None:
     )
 
     print(f"企画候補ID={plan_id} / 投稿カレンダーID={calendar_id} / 投稿原稿ID={draft_id} を書き込みました。")
+
+
+def run() -> None:
+    planning_system = load_agent_prompt("03_planning.md")
+    writing_system = load_agent_prompt("04_writing.md")
+
+    plan_text = claude_client.call_sonnet(
+        system=planning_system,
+        user_prompt=f"以下のリサーチ結果から、投稿企画案を{POSTS_PER_RUN + 2}件作成してください。"
+        "同じリサーチ結果からでも、切り口(angle)が重複しないようにしてください。\n\n"
+        + json.dumps(SAMPLE_RESEARCH, ensure_ascii=False, indent=2),
+        agent="planning",
+        kind="generation",
+        max_tokens=3000,
+    )
+    try:
+        plans = claude_client.parse_json_response(plan_text)
+    except json.JSONDecodeError:
+        print("企画エージェントの出力がJSONとして解析できませんでした。処理を中断します。")
+        print(plan_text)
+        return
+    if not plans:
+        print("企画案が0件でした。処理を終了します。")
+        return
+
+    top_plans = sorted(plans, key=lambda p: p.get("scores", {}).get("合計", 0), reverse=True)[:POSTS_PER_RUN]
+
+    for top_plan in top_plans:
+        try:
+            _write_one(planning_system, writing_system, top_plan)
+        except (budget_guard.SoftBudgetExceeded, budget_guard.HardBudgetExceeded):
+            raise
+        except Exception as e:  # noqa: BLE001
+            print(f"企画「{top_plan.get('title')}」の原稿作成中にエラーが発生したためスキップします: {e}")
+
     print(json.dumps(budget_guard.summary(), ensure_ascii=False, indent=2))
 
 

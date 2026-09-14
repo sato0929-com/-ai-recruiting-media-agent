@@ -21,7 +21,7 @@
 | 最終更新日 | 更新日 |
 
 初期行の例: `MONTHLY_BUDGET_JPY / 3000 / 月間API予算上限(円)`、
-`WEEKLY_POST_TARGET / 3 / 週間の投稿目標本数`、
+`WEEKLY_POST_TARGET / 4 / 週間の投稿目標本数`、
 `IG_ACCOUNT_MODE / test / test または production`、
 `YT_ACCOUNT_MODE / test / test または production`
 
