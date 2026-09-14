@@ -57,10 +57,15 @@ def _run_research() -> list[dict]:
             + "\n".join(f"- {k}" for k in keywords),
             agent="research",
             kind="generation",
-            max_tokens=3000,
+            # 検索結果のテキスト自体が出力トークンを消費するため、最終的なJSON回答を書く前に
+            # トークン上限に達して打ち切られないよう、十分大きめの上限にしておく。
+            max_tokens=8000,
             enable_web_search=True,
             max_searches=6,
         )
+        if not research_text.strip():
+            print("リサーチのレスポンスが空でした(トークン上限に達した可能性)。サンプルデータにフォールバックします。")
+            return SAMPLE_RESEARCH
         research = claude_client.parse_json_response(research_text)
         if research:
             return research
