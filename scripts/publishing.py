@@ -12,6 +12,7 @@ import json
 import re
 import sys
 import tempfile
+import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -92,6 +93,25 @@ def _graph_call(method: str, url: str, **kwargs):
     return resp.json()
 
 
+def _wait_for_media_ready(media_id: str, token: str, timeout_sec: int = 90, interval_sec: int = 3) -> None:
+    """Instagram側での画像/カルーセルの処理には数秒〜数十秒かかることがあり、完了前に
+    media_publishを呼ぶと「The media is not ready for publishing」エラーになる。
+    status_codeがFINISHEDになるまで待つ。"""
+    deadline = time.monotonic() + timeout_sec
+    while True:
+        result = _graph_call(
+            "get", f"{GRAPH_API_BASE}/{media_id}", params={"fields": "status_code", "access_token": token}
+        )
+        status = result.get("status_code")
+        if status == "FINISHED":
+            return
+        if status == "ERROR":
+            raise RuntimeError(f"Instagram側でのメディア処理に失敗しました(media_id={media_id})")
+        if time.monotonic() >= deadline:
+            raise RuntimeError(f"Instagram側でのメディア処理が{timeout_sec}秒たっても完了しませんでした(media_id={media_id})")
+        time.sleep(interval_sec)
+
+
 def _post_instagram_carousel(image_urls: list[str], caption: str) -> str:
     token = config.IG_ACCESS_TOKEN
     ig_user_id = config.IG_BUSINESS_ACCOUNT_ID
@@ -112,6 +132,10 @@ def _post_instagram_carousel(image_urls: list[str], caption: str) -> str:
                 data={"image_url": url, "is_carousel_item": "true", "access_token": token},
             )
             child_ids.append(result["id"])
+        # 各子画像の処理が終わっていないと、親のカルーセルコンテナ作成やpublishで
+        # エラーになることがあるため、子1枚ずつ処理完了を待ってから親を作る。
+        for child_id in child_ids:
+            _wait_for_media_ready(child_id, token)
         result = _graph_call(
             "post",
             f"{GRAPH_API_BASE}/{ig_user_id}/media",
@@ -123,6 +147,10 @@ def _post_instagram_carousel(image_urls: list[str], caption: str) -> str:
             },
         )
         creation_id = result["id"]
+
+    # コンテナ(単一画像 or カルーセル全体)の処理が終わるまで待ってからpublishする。
+    # 直後にpublishすると「The media is not ready for publishing」になることがある。
+    _wait_for_media_ready(creation_id, token)
 
     result = _graph_call(
         "post",
