@@ -159,10 +159,16 @@ def _post_instagram_carousel(image_urls: list[str], caption: str) -> str:
     )
     media_id = result["id"]
 
-    result = _graph_call(
-        "get", f"{GRAPH_API_BASE}/{media_id}", params={"fields": "permalink", "access_token": token}
-    )
-    return result.get("permalink", f"https://www.instagram.com/p/{media_id}/")
+    # ここまで来ればInstagramへの投稿自体は成功済み。以降のpermalink取得はおまけの情報であり、
+    # ここで例外を出して呼び出し元に「投稿失敗」として再試行させると、実際にはもう投稿済みの
+    # 内容が重複して再投稿されてしまう。そのため取得に失敗しても投稿成功として扱う。
+    try:
+        result = _graph_call(
+            "get", f"{GRAPH_API_BASE}/{media_id}", params={"fields": "permalink", "access_token": token}
+        )
+        return result.get("permalink", f"https://www.instagram.com/p/{media_id}/")
+    except Exception:  # noqa: BLE001
+        return f"https://www.instagram.com/p/{media_id}/"
 
 
 def _post_youtube_short(video_path: Path, title: str, description: str) -> str:
@@ -283,18 +289,25 @@ def run() -> None:
                     url = _publish_youtube(draft)
                 else:
                     raise ValueError(f"未対応のプラットフォームです: {platform}")
+            except Exception as e:  # noqa: BLE001
+                last_error = str(e)
+                continue
 
-                now = datetime.now(timezone.utc).isoformat()
+            # ここまで来た時点でSNSへの投稿自体は成功済み。この後の記録処理が失敗しても
+            # 「投稿失敗」として再試行してはいけない(実際にはもう投稿済みのため、再試行すると
+            # 重複投稿になる)。先にステータスを確定させてから、記録はベストエフォートで行う。
+            sheets_client.update_cell("投稿カレンダー", sheet_row_number, CALENDAR_STATUS_COLUMN, "投稿済み")
+            now = datetime.now(timezone.utc).isoformat()
+            try:
                 sheets_client.append_rows(
                     "投稿実績",
                     [[str(uuid.uuid4())[:8], calendar_id, platform, url, now, "", "", "", "", "", now]],
                 )
-                sheets_client.update_cell("投稿カレンダー", sheet_row_number, CALENDAR_STATUS_COLUMN, "投稿済み")
-                succeeded = True
-                published_count += 1
-                break
             except Exception as e:  # noqa: BLE001
-                last_error = str(e)
+                print(f"投稿は成功しましたが、投稿実績への記録に失敗しました(calendar_id={calendar_id}): {e}")
+            succeeded = True
+            published_count += 1
+            break
 
         if succeeded:
             consecutive_failures = 0

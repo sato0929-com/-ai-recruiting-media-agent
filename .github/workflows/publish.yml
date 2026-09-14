@@ -7,9 +7,11 @@ on:
         description: "true にすると、承認済みの投稿を実際にInstagram/YouTubeへ公開します。"
         type: boolean
         default: false
-  schedule:
-    # 毎日8:00 JST(=前日23:00 UTC)に、承認済みの投稿がないか確認して公開する。
-    - cron: "0 23 * * *"
+  # 2026-09-14: Instagram側で複数の重複投稿が発生したため、原因調査・アカウント状態確認のため
+  # 自動実行を一時停止中。解除する際はこのコメントを外す(手動実行はworkflow_dispatchで可能)。
+  # schedule:
+  #   # 毎日8:00 JST(=前日23:00 UTC)に、承認済みの投稿がないか確認して公開する。
+  #   - cron: "0 23 * * *"
 
 permissions:
   id-token: write   # Google CloudへのWorkload Identity Federation認証に必要
