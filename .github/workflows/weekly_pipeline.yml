@@ -1,14 +1,21 @@
 name: weekly-pipeline
 
-# フェーズ2時点では手動実行のみ。定時実行(cron)はフェーズ4で有効化する。
-# 例(フェーズ4で追加予定): schedule: - cron: '0 21 * * 0'  # 毎週日曜 06:00 JST
 on:
   workflow_dispatch:
     inputs:
       run_live:
-        description: "true にすると実際にAnthropic APIを呼び出します(少額課金が発生します)。falseならdry-runのみ。"
+        description: "true にすると実際にAnthropic APIとGoogleスプレッドシートを使う本番相当の実行をします(少額課金が発生します)。falseならdry-runのみ。"
         type: boolean
         default: false
+  schedule:
+    # 毎週月曜 07:00 JST(= 前日22:00 UTC)に自動実行。企画→原稿を自動生成し、
+    # スプレッドシートの「投稿カレンダー」に「下書き」として書き込む。
+    # 投稿の自動化はまだ行わない。日時を変更したい場合はここを編集する。
+    - cron: "0 22 * * 0"
+
+permissions:
+  id-token: write   # Google CloudへのWorkload Identity Federation認証に必要
+  contents: write    # cost_log/usage_log.json のコミットに必要
 
 jobs:
   test-and-generate:
@@ -26,20 +33,30 @@ jobs:
       - name: Run unit tests (no API calls, no cost)
         run: python -m unittest discover tests -v
 
+      # 手動実行でrun_live未指定(false)の場合のみ、課金なしの動作確認をする。
       - name: Dry-run generation check (no API calls, no cost)
-        if: ${{ inputs.run_live != true }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_live != true }}
         run: python scripts/run_test_generation.py --dry-run
 
-      - name: Live generation (calls Anthropic API, incurs cost)
-        if: ${{ inputs.run_live == true }}
+      # 定期実行(schedule)、または手動実行でrun_live=trueの場合に、実際の週次パイプラインを動かす。
+      - id: auth
+        if: ${{ github.event_name == 'schedule' || inputs.run_live == true }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/532132424145/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+          service_account: sheets-bot@recruiting-media-agent.iam.gserviceaccount.com
+
+      - name: Run weekly pipeline (calls Anthropic API + writes to Google Sheets, incurs cost)
+        if: ${{ github.event_name == 'schedule' || inputs.run_live == true }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MONTHLY_BUDGET_JPY: ${{ vars.MONTHLY_BUDGET_JPY }}
           USD_JPY_RATE: ${{ vars.USD_JPY_RATE }}
-        run: python scripts/run_test_generation.py
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ vars.GOOGLE_SHEETS_SPREADSHEET_ID }}
+        run: python scripts/weekly_pipeline.py
 
       - name: Commit updated usage log
-        if: ${{ inputs.run_live == true }}
+        if: ${{ github.event_name == 'schedule' || inputs.run_live == true }}
         run: |
           git config user.name "recruiting-media-bot"
           git config user.email "actions@users.noreply.github.com"

@@ -12,23 +12,32 @@
 ## ディレクトリ構成
 
 ```
-docs/setup/        画面単位のセットアップ手順書(GitHub Secrets, Googleスプレッドシート, Anthropic API, Cloudflare Pages)
+docs/setup/        画面単位のセットアップ手順書(Anthropic API, GitHub Secrets, Googleスプレッドシート, WIF連携, Cloudflare Pages)
 docs/sheets-design.md   Googleスプレッドシート10シートの設計仕様
 sheets/             スプレッドシートを自動生成するGoogle Apps Script
 agents/             8種類のAIエージェントのプロンプト定義(Markdown)
-scripts/            Anthropic API呼び出し・コスト管理・テスト生成のPythonコード
+scripts/            Anthropic API呼び出し・Sheets連携・コスト管理・週次パイプラインのPythonコード
 tests/              コスト管理ロジックの自動テスト
-.github/workflows/  GitHub Actionsの定時実行ワークフロー
+.github/workflows/  GitHub Actionsの定時実行ワークフロー(毎週自動実行)
 site/               Cloudflare Pagesで公開する比較記事・LP(フェーズ5)
 cost_log/           API利用額の記録(usage_log.json)
 ```
 
-## セットアップの順番
+## セットアップの順番(完了済み)
 
-1. `docs/setup/03_anthropic_api.md` — Anthropic APIキーの発行と月間上限の設定
-2. `docs/setup/01_github_secrets.md` — 発行したキーをGitHubに安全に登録
-3. `docs/setup/02_google_sheets.md` — 管理画面となるGoogleスプレッドシートの作成
-4. `docs/setup/04_cloudflare_pages.md` — 記事・LP公開の準備(フェーズ5で使用。今は読むだけでOK)
+1. `docs/setup/03_anthropic_api.md` — Anthropic APIキーの発行と月間上限の設定 ✅
+2. `docs/setup/01_github_secrets.md` — 発行したキーをGitHubに安全に登録 ✅
+3. `docs/setup/02_google_sheets.md` — 管理画面となるGoogleスプレッドシートの作成 ✅
+4. `docs/setup/05_workload_identity_federation.md` — GitHub ActionsからGoogleスプレッドシートへの鍵なし連携 ✅
+5. `docs/setup/04_cloudflare_pages.md` — 記事・LP公開の準備(フェーズ5で使用。今は読むだけでOK)
+
+## 自動実行の仕組み(現状)
+
+`.github/workflows/weekly_pipeline.yml` が毎週月曜7:00(JST)に自動起動し、
+`scripts/weekly_pipeline.py` が企画→原稿を自動生成して、Googleスプレッドシートの
+「企画候補」「投稿カレンダー」(ステータスは必ず「下書き」)「投稿原稿」に書き込みます。
+**投稿の自動化はまだ行いません**(Instagram/YouTubeのアカウント・API連携が未整備のため)。
+人間が週1回スプレッドシートを確認し、内容を見て「承認」に変更するまで一切公開されません。
 
 ## コスト管理の仕組み
 

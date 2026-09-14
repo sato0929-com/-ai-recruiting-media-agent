@@ -29,3 +29,10 @@ SOFT_LIMIT_RATIO = 0.8  # この割合に達したら新規コンテンツ生成
 COST_LOG_PATH = REPO_ROOT / "cost_log" / "usage_log.json"
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+# --- Googleスプレッドシート ---
+# 認証はサービスアカウントの鍵ファイルを使わず、Workload Identity Federation経由の
+# Application Default Credentials(ADC)を使う。ローカル実行時は
+# `gcloud auth application-default login` を、GitHub Actions上では
+# google-github-actions/auth アクションを使う(docs/setup/05_workload_identity_federation.md 参照)。
+GOOGLE_SHEETS_SPREADSHEET_ID = os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", "")
