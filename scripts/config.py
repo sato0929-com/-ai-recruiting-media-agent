@@ -50,8 +50,12 @@ ANTHROPIC_API_KEY = _clean_secret("ANTHROPIC_API_KEY")
 # google-github-actions/auth アクションを使う(docs/setup/05_workload_identity_federation.md 参照)。
 GOOGLE_SHEETS_SPREADSHEET_ID = _clean_secret("GOOGLE_SHEETS_SPREADSHEET_ID")
 
-# --- Cloud Storage(生成した画像・動画をInstagram/YouTube APIから参照できる公開URLにする) ---
+# --- Cloud Storage(生成した画像・動画をInstagram/YouTube APIから参照できるURLにする) ---
 GCS_BUCKET_NAME = _clean_secret("GCS_BUCKET_NAME", "recruiting-media-agent-assets")
+# 署名付きURL発行のための自己インパーソネーション対象(docs/setup/06参照)。
+GCS_SIGNING_SERVICE_ACCOUNT = _clean_secret(
+    "GCS_SIGNING_SERVICE_ACCOUNT", "sheets-bot@recruiting-media-agent.iam.gserviceaccount.com"
+)
 
 # --- Instagram Graph API ---
 IG_ACCESS_TOKEN = _clean_secret("IG_ACCESS_TOKEN")
