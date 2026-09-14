@@ -127,7 +127,9 @@ def _launch_kwargs() -> dict:
     return {}
 
 
-def _screenshot_html(html_content: str, size: tuple[int, int], output_path: Path) -> None:
+def _screenshot_html(
+    html_content: str, size: tuple[int, int], output_path: Path, image_type: str = "png"
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     launch_kwargs = _launch_kwargs()
     with sync_playwright() as p:
@@ -140,12 +142,18 @@ def _screenshot_html(html_content: str, size: tuple[int, int], output_path: Path
             browser = p.chromium.launch(executable_path=executable_path, **launch_kwargs)
         page = browser.new_page(viewport={"width": size[0], "height": size[1]})
         page.set_content(html_content, wait_until="networkidle")
-        page.screenshot(path=str(output_path))
+        if image_type == "jpeg":
+            page.screenshot(path=str(output_path), type="jpeg", quality=92)
+        else:
+            page.screenshot(path=str(output_path))
         browser.close()
 
 
 def render_carousel(slides: list[dict], output_dir: Path, template: str = "template_a") -> list[Path]:
-    """slides: [{"heading": str, "body": str}, ...] -> 生成したPNGファイルパスの一覧"""
+    """slides: [{"heading": str, "body": str}, ...] -> 生成したJPEGファイルパスの一覧
+
+    Instagram Graph APIの画像投稿はJPEG形式のみ受け付けるため、PNGではなくJPEGで出力する。
+    """
     colors = TEMPLATES[template]
     output_dir = Path(output_dir)
     paths = []
@@ -162,8 +170,8 @@ def render_carousel(slides: list[dict], output_dir: Path, template: str = "templ
             slide_no=i,
             slide_total=len(slides),
         )
-        out_path = output_dir / f"slide_{i:02d}.png"
-        _screenshot_html(content, CAROUSEL_SIZE, out_path)
+        out_path = output_dir / f"slide_{i:02d}.jpg"
+        _screenshot_html(content, CAROUSEL_SIZE, out_path, image_type="jpeg")
         paths.append(out_path)
     return paths
 
