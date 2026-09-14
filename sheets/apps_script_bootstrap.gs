@@ -20,7 +20,7 @@ function setupSpreadsheet() {
       headers: ['項目', '値', '説明', '最終更新日'],
       seed: [
         ['MONTHLY_BUDGET_JPY', 3000, '月間API予算上限(円)', new Date()],
-        ['WEEKLY_POST_TARGET', 4, '週間の投稿目標本数', new Date()],
+        ['WEEKLY_POST_TARGET', 8, '週間の投稿目標本数(Instagram4本+YouTube Shorts4本)', new Date()],
         ['IG_ACCOUNT_MODE', 'test', 'test または production', new Date()],
         ['YT_ACCOUNT_MODE', 'test', 'test または production', new Date()],
       ],

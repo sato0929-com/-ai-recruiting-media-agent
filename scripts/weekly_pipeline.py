@@ -25,8 +25,12 @@ import claude_client  # noqa: E402
 import sheets_client  # noqa: E402
 from run_test_generation import SAMPLE_RESEARCH, load_agent_prompt  # noqa: E402
 
-# 週次パイプライン1回の実行で作成する投稿本数(週4本体制。2026-09-14変更)。
-POSTS_PER_RUN = 4
+# 週次パイプライン1回の実行で、プラットフォームごとに作成する投稿本数
+# (Instagram 4本 + YouTube Shorts 4本 = 週8本体制。2026-09-14変更)。
+PLATFORM_POSTS_PER_RUN = {
+    "Instagram": 4,
+    "YouTube Shorts": 4,
+}
 
 # リサーチのテーマキーワード候補。毎週ローテーションして偏りを避ける。
 RESEARCH_KEYWORD_SETS = [
@@ -68,13 +72,7 @@ def _run_research() -> list[dict]:
     return SAMPLE_RESEARCH
 
 
-def _platform_for(format_label: str) -> str:
-    if "YouTube" in format_label:
-        return "YouTube Shorts"
-    return "Instagram"
-
-
-# 週4本を月・水・金・日に自動で振り分ける(投稿カレンダーの「投稿予定日時」に設定)。
+# 各プラットフォーム4本を月・水・金・日に自動で振り分ける(投稿カレンダーの「投稿予定日時」に設定)。
 # publishing.py はこの日付が来るまでその行を投稿しない。人間がシート上でこの日付を
 # 直接書き換えれば、個別に前後させることもできる。
 POST_WEEKDAYS = [0, 2, 4, 6]  # 月=0, 水=2, 金=4, 日=6(datetime.weekday()準拠)
@@ -86,10 +84,36 @@ def _scheduled_dates_for_this_week(count: int) -> list[str]:
     return [(monday + timedelta(days=POST_WEEKDAYS[i % len(POST_WEEKDAYS)])).isoformat() for i in range(count)]
 
 
-def _write_one(planning_system: str, writing_system: str, top_plan: dict, scheduled_date: str) -> None:
+def _plan_for_platform(planning_system: str, research: list[dict], platform: str, count: int) -> list[dict]:
+    """指定したプラットフォーム向けの企画案を、要求本数+2件作らせてスコア上位count件を返す。
+    企画エージェントの自由判断に任せると本数がプラットフォーム間で偏るため、
+    ここで明示的にプラットフォームごとに呼び分けて本数を保証する。"""
+    format_label = "Instagramカルーセル" if platform == "Instagram" else "YouTube Shorts"
+    plan_text = claude_client.call_sonnet(
+        system=planning_system,
+        user_prompt=f"以下のリサーチ結果から、{format_label}向けの投稿企画案を{count + 2}件作成してください。"
+        f"すべての企画案の「フォーマット」は必ず{format_label}にしてください。"
+        "同じリサーチ結果からでも、切り口(angle)が重複しないようにしてください。\n\n"
+        + json.dumps(research, ensure_ascii=False, indent=2),
+        agent="planning",
+        kind="generation",
+        max_tokens=3000,
+    )
+    try:
+        plans = claude_client.parse_json_response(plan_text)
+    except json.JSONDecodeError:
+        print(f"企画エージェントの出力がJSONとして解析できませんでした({platform}向け)。この回はスキップします。")
+        print(plan_text)
+        return []
+    return sorted(plans, key=lambda p: p.get("scores", {}).get("合計", 0), reverse=True)[:count]
+
+
+def _write_one(
+    planning_system: str, writing_system: str, top_plan: dict, scheduled_date: str, platform: str
+) -> None:
     draft_text = claude_client.call_sonnet(
         system=writing_system,
-        user_prompt="以下の企画案から、Instagramカルーセル投稿の原稿一式を作成してください。\n\n"
+        user_prompt="以下の企画案から、投稿原稿一式を作成してください。\n\n"
         + json.dumps(top_plan, ensure_ascii=False, indent=2),
         agent="writing",
         kind="generation",
@@ -122,7 +146,7 @@ def _write_one(planning_system: str, writing_system: str, top_plan: dict, schedu
     sheets_client.append_rows(
         "投稿カレンダー",
         [[
-            calendar_id, plan_id, scheduled_date, _platform_for(top_plan.get("format", "")), "test",
+            calendar_id, plan_id, scheduled_date, platform, "test",
             "下書き", "writing", now, "自動生成(要レビュー)",
         ]],
     )
@@ -146,35 +170,27 @@ def run() -> None:
 
     research = _run_research()
 
-    plan_text = claude_client.call_sonnet(
-        system=planning_system,
-        user_prompt=f"以下のリサーチ結果から、投稿企画案を{POSTS_PER_RUN + 2}件作成してください。"
-        "同じリサーチ結果からでも、切り口(angle)が重複しないようにしてください。\n\n"
-        + json.dumps(research, ensure_ascii=False, indent=2),
-        agent="planning",
-        kind="generation",
-        max_tokens=3000,
-    )
-    try:
-        plans = claude_client.parse_json_response(plan_text)
-    except json.JSONDecodeError:
-        print("企画エージェントの出力がJSONとして解析できませんでした。処理を中断します。")
-        print(plan_text)
-        return
-    if not plans:
-        print("企画案が0件でした。処理を終了します。")
-        return
-
-    top_plans = sorted(plans, key=lambda p: p.get("scores", {}).get("合計", 0), reverse=True)[:POSTS_PER_RUN]
-    scheduled_dates = _scheduled_dates_for_this_week(len(top_plans))
-
-    for top_plan, scheduled_date in zip(top_plans, scheduled_dates):
+    for platform, count in PLATFORM_POSTS_PER_RUN.items():
         try:
-            _write_one(planning_system, writing_system, top_plan, scheduled_date)
+            top_plans = _plan_for_platform(planning_system, research, platform, count)
         except (budget_guard.SoftBudgetExceeded, budget_guard.HardBudgetExceeded):
             raise
         except Exception as e:  # noqa: BLE001
-            print(f"企画「{top_plan.get('title')}」の原稿作成中にエラーが発生したためスキップします: {e}")
+            print(f"{platform}向けの企画案作成中にエラーが発生したため、この回はスキップします: {e}")
+            continue
+
+        if not top_plans:
+            print(f"{platform}向けの企画案が0件でした。この回はスキップします。")
+            continue
+
+        scheduled_dates = _scheduled_dates_for_this_week(len(top_plans))
+        for top_plan, scheduled_date in zip(top_plans, scheduled_dates):
+            try:
+                _write_one(planning_system, writing_system, top_plan, scheduled_date, platform)
+            except (budget_guard.SoftBudgetExceeded, budget_guard.HardBudgetExceeded):
+                raise
+            except Exception as e:  # noqa: BLE001
+                print(f"企画「{top_plan.get('title')}」の原稿作成中にエラーが発生したためスキップします: {e}")
 
     print(json.dumps(budget_guard.summary(), ensure_ascii=False, indent=2))
 

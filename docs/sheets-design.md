@@ -21,7 +21,7 @@
 | 最終更新日 | 更新日 |
 
 初期行の例: `MONTHLY_BUDGET_JPY / 3000 / 月間API予算上限(円)`、
-`WEEKLY_POST_TARGET / 4 / 週間の投稿目標本数`、
+`WEEKLY_POST_TARGET / 8 / 週間の投稿目標本数(Instagram4本+YouTube Shorts4本)`、
 `IG_ACCOUNT_MODE / test / test または production`、
 `YT_ACCOUNT_MODE / test / test または production`
 
@@ -56,8 +56,10 @@
 | 最終更新日時 | 自動更新 |
 | 備考 | 自由記入 |
 
-週次パイプラインは、週4本を自動で月・水・金・日に振り分けて「投稿予定日時」に設定する
-(`scripts/weekly_pipeline.py` の `POST_WEEKDAYS`)。曜日構成を変えたい場合はこの定数を編集する。
+週次パイプラインは、Instagram 4本・YouTube Shorts 4本(週8本)を自動生成し、
+それぞれ月・水・金・日に振り分けて「投稿予定日時」に設定する
+(`scripts/weekly_pipeline.py` の `PLATFORM_POSTS_PER_RUN`・`POST_WEEKDAYS`)。
+本数や曜日構成を変えたい場合はこれらの定数を編集する。
 
 ## 4. 投稿原稿
 
