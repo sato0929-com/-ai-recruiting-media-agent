@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -74,7 +74,19 @@ def _platform_for(format_label: str) -> str:
     return "Instagram"
 
 
-def _write_one(planning_system: str, writing_system: str, top_plan: dict) -> None:
+# 週4本を月・水・金・日に自動で振り分ける(投稿カレンダーの「投稿予定日時」に設定)。
+# publishing.py はこの日付が来るまでその行を投稿しない。人間がシート上でこの日付を
+# 直接書き換えれば、個別に前後させることもできる。
+POST_WEEKDAYS = [0, 2, 4, 6]  # 月=0, 水=2, 金=4, 日=6(datetime.weekday()準拠)
+
+
+def _scheduled_dates_for_this_week(count: int) -> list[str]:
+    today = datetime.now(timezone.utc).date()
+    monday = today - timedelta(days=today.weekday())
+    return [(monday + timedelta(days=POST_WEEKDAYS[i % len(POST_WEEKDAYS)])).isoformat() for i in range(count)]
+
+
+def _write_one(planning_system: str, writing_system: str, top_plan: dict, scheduled_date: str) -> None:
     draft_text = claude_client.call_sonnet(
         system=writing_system,
         user_prompt="以下の企画案から、Instagramカルーセル投稿の原稿一式を作成してください。\n\n"
@@ -110,7 +122,7 @@ def _write_one(planning_system: str, writing_system: str, top_plan: dict) -> Non
     sheets_client.append_rows(
         "投稿カレンダー",
         [[
-            calendar_id, plan_id, "", _platform_for(top_plan.get("format", "")), "test",
+            calendar_id, plan_id, scheduled_date, _platform_for(top_plan.get("format", "")), "test",
             "下書き", "writing", now, "自動生成(要レビュー)",
         ]],
     )
@@ -154,10 +166,11 @@ def run() -> None:
         return
 
     top_plans = sorted(plans, key=lambda p: p.get("scores", {}).get("合計", 0), reverse=True)[:POSTS_PER_RUN]
+    scheduled_dates = _scheduled_dates_for_this_week(len(top_plans))
 
-    for top_plan in top_plans:
+    for top_plan, scheduled_date in zip(top_plans, scheduled_dates):
         try:
-            _write_one(planning_system, writing_system, top_plan)
+            _write_one(planning_system, writing_system, top_plan, scheduled_date)
         except (budget_guard.SoftBudgetExceeded, budget_guard.HardBudgetExceeded):
             raise
         except Exception as e:  # noqa: BLE001

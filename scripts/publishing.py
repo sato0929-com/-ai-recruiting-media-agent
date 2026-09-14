@@ -13,7 +13,7 @@ import re
 import sys
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -39,6 +39,27 @@ GRAPH_API_BASE = "https://graph.instagram.com/v21.0"
 
 # 投稿カレンダーのステータス列(A列を1として6列目=F列)
 CALENDAR_STATUS_COLUMN = "F"
+
+JST = timezone(timedelta(hours=9))
+
+
+def _today_jst() -> date:
+    return datetime.now(JST).date()
+
+
+def _is_due(scheduled_value: str) -> bool:
+    """「投稿予定日時」列を見て、今日(JST)以降に投稿してよいかを判定する。
+
+    列が空の場合(手動テスト投稿など)は、これまで通り承認され次第すぐ投稿する。
+    日付の解析に失敗した場合も同様に、投稿を止めないため「投稿してよい」とみなす。"""
+    value = (scheduled_value or "").strip()
+    if not value:
+        return True
+    try:
+        scheduled_date = datetime.fromisoformat(value).date()
+    except ValueError:
+        return True
+    return scheduled_date <= _today_jst()
 
 
 def _chunk_script(text: str, chars_per_chunk: int = 25, chars_per_sec: float = 6.0) -> list[dict]:
@@ -213,6 +234,9 @@ def run() -> None:
         sheet_row_number = i + 2  # ヘッダー行(1行目)を除く
         if len(row) < 6 or row[5] != "承認":
             continue
+        scheduled_value = row[2] if len(row) > 2 else ""
+        if not _is_due(scheduled_value):
+            continue  # 予定日がまだ先なので、この行は今回は投稿しない
 
         calendar_id = row[0]
         platform = row[3] if len(row) > 3 else ""
