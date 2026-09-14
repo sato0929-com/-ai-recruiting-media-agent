@@ -41,15 +41,19 @@ _CAROUSEL_HTML = """<!doctype html>
   body{{
     width:{w}px;height:{h}px;background:{bg};color:{ink};
     font-family:"Noto Sans JP",sans-serif;
-    display:flex;flex-direction:column;justify-content:space-between;
-    box-sizing:border-box;padding:140px 110px;
+    display:flex;flex-direction:column;
+    box-sizing:border-box;padding:120px 110px;
   }}
   .eyebrow{{font-size:26px;color:{accent};font-weight:700;letter-spacing:.14em;}}
+  .content{{flex:1;display:flex;flex-direction:column;justify-content:center;}}
   h1{{
-    font-family:"Shippori Mincho",serif;font-size:62px;line-height:1.5;
-    margin:44px 0 0;color:{ink};
+    font-family:"Shippori Mincho",serif;font-size:62px;line-height:1.55;
+    margin:0;color:{ink};white-space:pre-line;
   }}
-  p{{font-size:32px;line-height:1.9;margin:56px 0 0;color:{ink};}}
+  p{{
+    font-size:32px;line-height:1.95;margin:48px 0 0;color:{ink};
+    white-space:pre-line;
+  }}
   .footer{{
     display:flex;justify-content:space-between;align-items:center;
     font-size:22px;color:{accent};padding-top:32px;border-top:1px solid {accent_soft};
@@ -59,8 +63,8 @@ _CAROUSEL_HTML = """<!doctype html>
   }}
 </style></head>
 <body>
-  <div>
-    <div class="eyebrow">採用AIメディア</div>
+  <div class="eyebrow">採用AIメディア</div>
+  <div class="content">
     <h1>{heading}</h1>
     <p>{body}</p>
   </div>
@@ -83,7 +87,7 @@ _SHORTS_FRAME_HTML = """<!doctype html>
   }}
   p{{
     font-family:"Shippori Mincho",serif;font-size:68px;line-height:1.7;
-    text-align:center;color:{ink};
+    text-align:center;color:{ink};white-space:pre-line;
   }}
   .accent-bar{{
     position:absolute;top:0;left:0;right:0;height:6px;background:{accent};
