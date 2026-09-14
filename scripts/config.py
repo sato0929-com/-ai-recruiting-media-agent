@@ -20,9 +20,11 @@ PRICING_USD_PER_MTOK = {
 }
 
 # --- コスト管理 ---
-MONTHLY_BUDGET_JPY = float(os.environ.get("MONTHLY_BUDGET_JPY", "3000"))
+# `os.environ.get(key, default)` だと、GitHub Actionsの未設定vars(空文字列 "")が
+# 渡された場合にdefaultへ落ちずエラーになるため、空文字列も「未設定」として扱う。
+MONTHLY_BUDGET_JPY = float(os.environ.get("MONTHLY_BUDGET_JPY") or "3000")
 # 実勢レートより高めにしておくと、円換算コストを保守的(高め)に見積もれる。
-USD_JPY_RATE = float(os.environ.get("USD_JPY_RATE", "160"))
+USD_JPY_RATE = float(os.environ.get("USD_JPY_RATE") or "160")
 SOFT_LIMIT_RATIO = 0.8  # この割合に達したら新規コンテンツ生成を停止
 
 # --- 保存先 ---
