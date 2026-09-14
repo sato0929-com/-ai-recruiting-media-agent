@@ -59,6 +59,16 @@ python -m unittest discover tests
 python scripts/run_test_generation.py --dry-run
 ```
 
+画像・動画生成(`scripts/render_creative.py`)をローカルで試す場合は、あわせて以下も必要です
+(GitHub Actionsの実行環境には標準でffmpegが入っており、Playwrightのブラウザは
+ワークフロー内で自動インストールされるため、ローカルで試さない限り不要です)。
+
+```bash
+playwright install --with-deps chromium
+# ffmpegが無い場合(Ubuntu/Debianの例):
+sudo apt-get install -y ffmpeg
+```
+
 実際にAnthropic APIを呼んでテスト生成する場合(少額課金が発生します):
 
 ```bash
