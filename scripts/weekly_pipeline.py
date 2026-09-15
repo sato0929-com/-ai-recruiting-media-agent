@@ -113,6 +113,18 @@ def _plan_for_platform(planning_system: str, research: list[dict], platform: str
     return sorted(plans, key=lambda p: p.get("scores", {}).get("合計", 0), reverse=True)[:count]
 
 
+CTA_BASE_URL = "https://liftercorp.co/contact"
+
+
+def _add_utm_tracking(caption: str, platform: str, calendar_id: str) -> str:
+    """CTAリンクにUTMパラメータを付与し、どの投稿経由の問い合わせかを後から追跡できるようにする
+    (2026-09-15〜。目的はアフィリエイト収益ではなく、LIFTER自社の問い合わせ獲得のため)。
+    原稿エージェントはCTAをこのベースURLのまま出力する前提(agents/04_writing.md参照)。"""
+    utm_source = "instagram" if platform == "Instagram" else "youtube"
+    tracked_url = f"{CTA_BASE_URL}?utm_source={utm_source}&utm_medium=social&utm_content={calendar_id}"
+    return caption.replace(CTA_BASE_URL, tracked_url)
+
+
 def _write_one(
     planning_system: str, writing_system: str, top_plan: dict, scheduled_date: str, platform: str
 ) -> None:
@@ -134,7 +146,7 @@ def _write_one(
     now = datetime.now(timezone.utc).isoformat()
     plan_id, calendar_id, draft_id = (str(uuid.uuid4())[:8] for _ in range(3))
     scores = top_plan.get("scores", {})
-    caption = draft.get("caption", "")
+    caption = _add_utm_tracking(draft.get("caption", ""), platform, calendar_id)
 
     sheets_client.append_rows(
         "企画候補",
@@ -161,7 +173,8 @@ def _write_one(
         [[
             draft_id, calendar_id, caption,
             json.dumps(draft.get("instagram_carousel", []), ensure_ascii=False),
-            draft.get("youtube_shorts_script", ""), draft.get("cta", ""),
+            draft.get("youtube_shorts_script", ""),
+            _add_utm_tracking(draft.get("cta", ""), platform, calendar_id),
             caption.strip().startswith("[PR]"), "", "", 1, now,
         ]],
     )
